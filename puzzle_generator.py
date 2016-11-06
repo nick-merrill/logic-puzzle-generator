@@ -69,16 +69,16 @@ class Scenario:
     def __init__(self, puzzle, character_types: {str: type}):
         self.puzzle = puzzle  # type: Puzzle
         self.character_types = character_types
-        self.result = None  # Will be set after correctness is evaluated.
+        self.result = None  # Will be set after consistency is evaluated.
 
-    def _check_correctness(self):
+    def _check_consistency(self):
         """
         If it makes sense that each character would speak their respective phrases, returns True; otherwise False.
 
         If False, returns a reason.
 
         :rtype: (bool, str)
-        :returns: (is_correct, reason)
+        :returns: (is_consistent, reason)
         """
         for character_name, statements in self.puzzle.character_statements.items():
             speaking_character_type = self.character_types[character_name]
@@ -93,12 +93,12 @@ class Scenario:
                 # Note: All statements this character says must make sense independently.
                 statement = ConjunctiveStatement(*statements)
 
-            if statement.evaluate_correctness(speaking_character_type=speaking_character_type, scenario=self) is False:
+            if statement.evaluate_consistency(speaking_character_type=speaking_character_type, scenario=self) is False:
                 return False, '{} should not have said "{}".'.format(character_name, statement)
         return True, None
 
-    def check_correctness(self):
-        result = self._check_correctness()
+    def check_consistency(self):
+        result = self._check_consistency()
         self.result = result
         return result
 
@@ -134,8 +134,8 @@ class Scenario:
 
 
 class Statement:
-    def evaluate_correctness(self, speaking_character_type, scenario: Scenario):
-        logger.debug('Evaluating correctness of "{}" as {}'.format(self, speaking_character_type.title))
+    def evaluate_consistency(self, speaking_character_type, scenario: Scenario):
+        logger.debug('Evaluating consistency of "{}" as {}'.format(self, speaking_character_type.title))
         if speaking_character_type == Monk:
             return True
         truth = self.evaluate_truth(scenario=scenario)
@@ -363,7 +363,7 @@ class Puzzle:
             self.scenarios.append(scenario)
 
     def check_scenario(self, scenario, should_print=False):
-        result, reason = scenario.check_correctness()
+        result, reason = scenario.check_consistency()
         if should_print:
             if result:
                 print('+++++ \t{}'.format(scenario))
@@ -376,7 +376,7 @@ class Puzzle:
         for scenario in self.scenarios:
             self.check_scenario(scenario=scenario, should_print=should_print)
 
-    def get_correct_scenario_set(self):
+    def get_consistent_scenario_set(self):
         ret = set()
         for scenario in self.scenarios:
             if scenario.result[0] is True:

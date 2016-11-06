@@ -14,14 +14,14 @@ class TestIsOfTypeStatement(unittest.TestCase):
     def test_1(self):
         statement = IsOfType('A', Knight)
         self.assertFalse(statement.evaluate_truth(self.s))
-        self.assertFalse(statement.evaluate_correctness(Knight, self.s))
-        self.assertTrue(statement.evaluate_correctness(Knave, self.s))
+        self.assertFalse(statement.evaluate_consistency(Knight, self.s))
+        self.assertTrue(statement.evaluate_consistency(Knave, self.s))
 
     def test_2(self):
         statement = IsOfType('B', Knight)
         self.assertTrue(statement.evaluate_truth(scenario=self.s))
-        self.assertTrue(statement.evaluate_correctness(Knight, self.s))
-        self.assertFalse(statement.evaluate_correctness(Knave, self.s))
+        self.assertTrue(statement.evaluate_consistency(Knight, self.s))
+        self.assertFalse(statement.evaluate_consistency(Knave, self.s))
 
 
 class TestConjunctiveStatement(unittest.TestCase):
@@ -83,7 +83,7 @@ class TestSimplePuzzles(unittest.TestCase):
             'B': [],
         })
         p.generate_and_check_scenarios(should_print=True)
-        correct_scenarios = p.get_correct_scenario_set()
+        correct_scenarios = p.get_consistent_scenario_set()
         print(correct_scenarios)
         self.assertSetEqual(correct_scenarios, {Scenario(puzzle=p, character_types={
             'A': Knave,
@@ -96,7 +96,7 @@ class TestSimplePuzzles(unittest.TestCase):
             'B': [],
         })
         p.generate_and_check_scenarios(should_print=True)
-        correct_scenarios = p.get_correct_scenario_set()
+        correct_scenarios = p.get_consistent_scenario_set()
         print(correct_scenarios)
         self.assertSetEqual(correct_scenarios, {Scenario(puzzle=p, character_types={
             'A': Knave,
@@ -110,5 +110,5 @@ class TestSimplePuzzles(unittest.TestCase):
             'Clara': [],
         })
         p.generate_and_check_scenarios(should_print=True)
-        correct_scenarios = p.get_correct_scenario_set()
+        correct_scenarios = p.get_consistent_scenario_set()
         print(correct_scenarios)
