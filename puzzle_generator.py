@@ -1,11 +1,26 @@
 import abc
 import itertools
+import operator
+import logging
+
+logger = logging.getLogger(__name__)
 
 DEBUG = True
+if DEBUG:
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(logging.StreamHandler())
 
 
 class CharacterIdentifierError(Exception):
     pass
+
+
+class TooManyMonksError(Exception):
+    def __init__(self, monk_count):
+        self.message = "You asked for {} Monks, which is too many here.".format(monk_count)
+
+    def __repr__(self):
+        return self.message
 
 
 class Character:
@@ -52,12 +67,18 @@ POSSIBLE_CHARACTERS = [Knight, Knave, Monk]
 
 class Scenario:
     def __init__(self, puzzle, character_types: {str: type}):
-        self.puzzle = puzzle
+        self.puzzle = puzzle  # type: Puzzle
         self.character_types = character_types
+        self.result = None  # Will be set after correctness is evaluated.
 
-    def check_correctness(self):
+    def _check_correctness(self):
         """
-        If it makes sense that the character would speak this phrase, returns True; otherwise False.
+        If it makes sense that each character would speak their respective phrases, returns True; otherwise False.
+
+        If False, returns a reason.
+
+        :rtype: (bool, str)
+        :returns: (is_correct, reason)
         """
         for character_name, statements in self.puzzle.character_statements.items():
             speaking_character_type = self.character_types[character_name]
@@ -73,18 +94,48 @@ class Scenario:
                 statement = ConjunctiveStatement(*statements)
 
             if statement.evaluate_correctness(speaking_character_type=speaking_character_type, scenario=self) is False:
-                return dict(result=False, reason="{} should not have said {}.".format(character_name, statement))
+                return False, '{} should not have said "{}".'.format(character_name, statement)
+        return True, None
+
+    def check_correctness(self):
+        result = self._check_correctness()
+        self.result = result
+        return result
+
+    def __eq__(self, other):
+        """
+        To be equal, two Scenario instances must only have the same character name-type assignments and character count.
+        """
+        assert(isinstance(other, Scenario))
+        if len(self.character_types) != len(other.character_types):
+            return False
+        for name, t in self.character_types.items():
+            if other.character_types[name] != t:
+                return False
         return True
 
-    def __str__(self):
+    def __hash__(self):
+        """
+        TODO: This could be more efficient and less stupid.  ;)
+        """
+        character_string = "|"
+        for name, t in self.character_types.items():
+            character_string += "{},{}|".format(name, t.short_identifier)
+        return hash(character_string)
+
+    def __str__(self, joiner=" \t "):
         names_and_identities = []
         for name, character_type in self.character_types.items():
-            names_and_identities.append("{}[{}]".format(name, character_type.short_identifier))
-        return " \t ".join(names_and_identities)
+            names_and_identities.append("{}={}".format(name, character_type.short_identifier))
+        return joiner.join(names_and_identities)
+
+    def __repr__(self):
+        return "<Scenario: {}>".format(self.__str__(joiner=', '))
 
 
 class Statement:
     def evaluate_correctness(self, speaking_character_type, scenario: Scenario):
+        logger.debug('Evaluating correctness of "{}" as {}'.format(self, speaking_character_type.title))
         if speaking_character_type == Monk:
             return True
         truth = self.evaluate_truth(scenario=scenario)
@@ -102,7 +153,7 @@ class Statement:
         pass
 
     def __str__(self):
-        return '"{}"'.format(self.as_sentence())
+        return '{}'.format(self.as_sentence())
 
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, str(self))
@@ -117,19 +168,20 @@ class AbstractStatementCombiner(Statement):
         If returns None, loop will continue.  If returns other, evaluation is finished with this final value.
         :return: True | False | None
         """
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def default_value(self):
         """
         :return: True | False
         """
-        pass
+        raise NotImplementedError
 
     def __init__(self, *statements: [Statement]):
         self.statements = statements
 
     def evaluate_truth(self, scenario: Scenario):
+        logger.debug("Evaluating truth of [{}] ".format(self))
         for statement in self.statements:
             truth = statement.evaluate_truth(scenario=scenario)
             result = self.for_each_statement(truth_value=truth)
@@ -189,8 +241,6 @@ class IsOfType(Statement):
         self.claimed_character_type = claimed_character_type
 
     def evaluate_truth(self, scenario: Scenario):
-        if DEBUG:
-            print("Evaluating truth for", self)
         try:
             return isinstance(scenario.character_types[self.target_name], self.claimed_character_type)
         except KeyError:
@@ -200,11 +250,73 @@ class IsOfType(Statement):
         return "{} is a {}.".format(self.target_name, self.claimed_character_type.title)
 
 
+def english_operator_helper(relation):
+    if relation == operator.eq:
+        return 'exactly'
+    elif relation == operator.lt:
+        return 'fewer than'
+    elif relation == operator.gt:
+        return 'more than'
+    elif relation == operator.le:
+        return 'fewer than or exactly'
+    elif relation == operator.ge:
+        return 'more than or exactly'
+    else:
+        raise Exception("Cannot handle operator of type {}.".format(relation))
+
+
+class CountOfType(Statement):
+    def __init__(self, character_type, claimed_count: int, claimed_relation):
+        self.character_type = character_type
+        self.claimed_count = claimed_count
+        self.claimed_relation = claimed_relation
+
+    def evaluate_truth(self, scenario: Scenario):
+        count = 0
+        for t in scenario.character_types.values():
+            if t == self.character_type:
+                count += 1
+        return self.claimed_relation(count, self.claimed_count)
+
+    def as_sentence(self):
+        return "There are {op} {count} {kind}s.".format(
+            op=english_operator_helper(self.claimed_relation),
+            count=self.claimed_count,
+            kind=self.character_type.title,
+        )
+
+
+class SamenessCount(Statement):
+    def __init__(self, claimed_count: int, claimed_relation):
+        self.claimed_count = claimed_count
+        self.claimed_relation = claimed_relation
+
+        satisfying_statements = []
+        for kind in POSSIBLE_CHARACTERS:
+            satisfying_statements.append(
+                CountOfType(kind, self.claimed_count, self.claimed_relation)
+            )
+        self.disjunctive_statement = DisjunctiveStatement(*satisfying_statements)
+
+    def evaluate_truth(self, scenario: Scenario):
+        """
+        If one of the possible character types satisfies this statement, then it is true.
+        """
+        return self.disjunctive_statement.evaluate_truth(scenario=scenario)
+
+    def as_sentence(self):
+        return "{op} {count} of us are the same.".format(
+            op=english_operator_helper(self.claimed_relation),
+            count=self.claimed_count,
+        )
+
+
 class Puzzle:
     def __init__(self, character_names_and_statements: {str: [Statement]}):
         self.scenarios = []
         self.character_names = []
         self.character_statements = {}
+
         for character_name, statements in character_names_and_statements.items():
             self.character_names.append(character_name)
             self.character_statements[character_name] = statements
@@ -226,28 +338,50 @@ class Puzzle:
         return max_num_monks
 
     def _generate_scenario(self, identity_ordering: [type]):
+        """
+        Generates a scenario, rejecting a scenario with too many Monks.
+        """
         character_types = {}
         i = 0
+        monk_count = 0
         for name in self.character_names:
+            if identity_ordering[i] == Monk:
+                monk_count += 1
             character_types[name] = identity_ordering[i]
+            if monk_count > self.max_num_monks:
+                raise TooManyMonksError(monk_count)
             i += 1
         return Scenario(puzzle=self, character_types=character_types)
 
     def _generate_scenarios(self):
         self.scenarios = []  # Clears all scenarios first.
-        for identity_ordering in itertools.combinations_with_replacement(POSSIBLE_CHARACTERS, self.num_characters):
-            scenario = self._generate_scenario(identity_ordering)
+        for identity_ordering in itertools.product(POSSIBLE_CHARACTERS, repeat=self.num_characters):
+            try:
+                scenario = self._generate_scenario(identity_ordering)
+            except TooManyMonksError:
+                continue
             self.scenarios.append(scenario)
 
-    def generate_and_check_scenarios(self):
-        self._generate_scenarios()
-        for scenario in self.scenarios:
-            if scenario.check_correctness():
-                print('+++++ \t' + str(scenario))
+    def check_scenario(self, scenario, should_print=False):
+        result, reason = scenario.check_correctness()
+        if should_print:
+            if result:
+                print('+++++ \t{}'.format(scenario))
             else:
                 if DEBUG is True:
-                    print('----- \t' + str(scenario))
+                    print('----- \t{} \t ---> {}'.format(scenario, reason))
+
+    def generate_and_check_scenarios(self, should_print=False):
+        self._generate_scenarios()
+        for scenario in self.scenarios:
+            self.check_scenario(scenario=scenario, should_print=should_print)
+
+    def get_correct_scenario_set(self):
+        ret = set()
+        for scenario in self.scenarios:
+            if scenario.result[0] is True:
+                ret.add(scenario)
+        return ret
 
     def __str__(self):
         return self.character_names
-

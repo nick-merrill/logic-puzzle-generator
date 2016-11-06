@@ -1,8 +1,45 @@
 import unittest
+import operator
 
 from .puzzle_generator import *
 
 
+class TestIsOfTypeStatement(unittest.TestCase):
+    def setUp(self):
+        self.s = Scenario(puzzle=None, character_types={
+            'A': Knave,
+            'B': Knight,
+        })
+
+    def test_1(self):
+        statement = IsOfType('A', Knight)
+        self.assertFalse(statement.evaluate_truth(self.s))
+        self.assertFalse(statement.evaluate_correctness(Knight, self.s))
+        self.assertTrue(statement.evaluate_correctness(Knave, self.s))
+
+    def test_2(self):
+        statement = IsOfType('B', Knight)
+        self.assertTrue(statement.evaluate_truth(scenario=self.s))
+        self.assertTrue(statement.evaluate_correctness(Knight, self.s))
+        self.assertFalse(statement.evaluate_correctness(Knave, self.s))
+
+
+class TestConjunctiveStatement(unittest.TestCase):
+    def setUp(self):
+        self.s = Scenario(puzzle=None, character_types={
+            'A': Knave,
+            'B': Knight,
+        })
+
+    def test_1(self):
+        s = Scenario(puzzle=None, character_types={
+            'A': Knave,
+            'B': Knight,
+        })
+        statement = IsOfType('A', Knight)
+
+
+@unittest.skip
 class TestBasicPuzzleElements(unittest.TestCase):
     character_names = ['Alice', 'Bob', 'Charlie', 'Doug', 'Ellie', 'Frank', 'Gillian']
 
@@ -35,14 +72,43 @@ class TestBasicPuzzleElements(unittest.TestCase):
         self.assertEqual(p6.max_num_monks, 2)
 
 
+@unittest.skip
 class TestSimplePuzzles(unittest.TestCase):
-    def test_day_1_puzzle(self):
+    def test_lecture_1_puzzle(self):
         p = Puzzle({
-            'Alice': [
-                ConjunctiveStatement(
-                    IsOfType('Alice', Knave),
-                    IsOfType('Bob', Knave),
-                )],
-            'Bob': []
+            'A': [
+                IsOfType('A', Knave),
+                IsOfType('B', Knave),
+            ],
+            'B': [],
         })
-        p.generate_and_check_scenarios()
+        p.generate_and_check_scenarios(should_print=True)
+        correct_scenarios = p.get_correct_scenario_set()
+        print(correct_scenarios)
+        self.assertSetEqual(correct_scenarios, {Scenario(puzzle=p, character_types={
+            'A': Knave,
+            'B': Knight,
+        })})
+
+    def test_lecture_1_puzzle_variety_2(self):
+        p = Puzzle({
+            'A': [CountOfType(Knave, 2, operator.eq)],
+            'B': [],
+        })
+        p.generate_and_check_scenarios(should_print=True)
+        correct_scenarios = p.get_correct_scenario_set()
+        print(correct_scenarios)
+        self.assertSetEqual(correct_scenarios, {Scenario(puzzle=p, character_types={
+            'A': Knave,
+            'B': Knight,
+        })})
+
+    def _test_lecture_3_puzzle(self):
+        p = Puzzle({
+            'Alfred': [CountOfType(Knight, 1, operator.eq)],
+            'Betty': [SamenessCount(3, operator.eq)],
+            'Clara': [],
+        })
+        p.generate_and_check_scenarios(should_print=True)
+        correct_scenarios = p.get_correct_scenario_set()
+        print(correct_scenarios)
