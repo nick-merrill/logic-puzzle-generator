@@ -121,7 +121,8 @@ class Scenario:
         TODO: This could be more efficient and less stupid.  ;)
         """
         character_string = "|"
-        for name, t in sorted(self.character_types):
+        for name in sorted(self.character_types):
+            t = self.character_types[name]
             character_string += "{},{}|".format(name, t.short_identifier)
         return hash(character_string)
 
