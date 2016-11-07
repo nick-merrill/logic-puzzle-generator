@@ -13,7 +13,7 @@ def main():
     # print(p1.get_solution_count(), p1.get_total_possibilities())
     # print("---------------")
 
-    gen = PuzzleGenerator(['A', 'B', 'C', 'D'], [SamenessCount, Honesty])
+    gen = PuzzleGenerator(['A', 'B', 'C'], [SamenessCount, Honesty])
     gen.generate_puzzles()
 
 

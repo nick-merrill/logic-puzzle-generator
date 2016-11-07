@@ -579,7 +579,7 @@ class Puzzle:
 
 class PuzzleGenerator:
     def __init__(self, character_names, possible_statement_kinds):
-        self.possible_names = ['A', 'B', 'C', 'D']
+        self.possible_names = character_names
         self.possible_statement_kinds = possible_statement_kinds
 
     def generate_possible_statements(self):
@@ -588,10 +588,10 @@ class PuzzleGenerator:
             statements += statement_kind.generate_possibilities(self.possible_names, POSSIBLE_CHARACTERS)
 
         # Bonus Statements
+        statements.append(IsOfType('B', Knave))
+        statements.append(IsOfType('B', Monk))
         statements.append(IsOfType('C', Monk))
         statements.append(IsOfType('C', Knight))
-        statements.append(IsOfType('D', Knave))
-        statements.append(IsOfType('D', Monk))
 
         return statements
 
@@ -600,9 +600,9 @@ class PuzzleGenerator:
 
         good_puzzles = []
 
-        z = 8
-        possible_statement_combinations = itertools.permutations(statements, z)
-        total_count = math.factorial(len(statements)) / math.factorial(len(statements) - z)
+        statements_needed = 3
+        possible_statement_combinations = itertools.permutations(statements, statements_needed)
+        total_count = math.factorial(len(statements)) / math.factorial(len(statements) - statements_needed)
         print(len(statements), total_count)
         i = 0
         EARLY_BREAK = 1
@@ -627,10 +627,9 @@ class PuzzleGenerator:
             # TODO: Don't use the same statement twice.
 
             puzzle = Puzzle({
-                self.possible_names[0]: IfConnective(s[0], s[1]),
-                self.possible_names[1]: IfConnective(s[2], s[3]),
-                self.possible_names[2]: IfConnective(s[4], s[5]),
-                self.possible_names[3]: IfConnective(s[6], s[7]),
+                self.possible_names[0]: s[0],
+                self.possible_names[1]: s[1],
+                self.possible_names[2]: s[2],
             })
             if not (puzzle.is_valid_puzzle()
                     and puzzle.get_solution_count() == 2
@@ -645,7 +644,7 @@ class PuzzleGenerator:
             for name in sol_a.keys():
                 if sol_a[name] != sol_b[name]:
                     difference += 1
-            if difference < 4:
+            if difference < 3:
                 continue
             good_puzzles.append(puzzle)
             with open(os.path.join(os.path.curdir, 'good_puzzles_auto.txt'), 'a') as file:

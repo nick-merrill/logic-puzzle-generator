@@ -273,4 +273,12 @@ class TestPuzzles(unittest.TestCase):
             'D': Knight,
         }], allow_monks=False)
 
+    def test_random_1(self):
+        self.assertPuzzleSolution({
+            'A': IsOfType('C', Knight),
+            'B': Honesty('A', 'B', operator.gt),
+            'C': SamenessCount(1, operator.le),
+        }, [{
+        }])
+
 
