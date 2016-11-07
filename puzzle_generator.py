@@ -4,11 +4,13 @@ import operator
 import logging
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.StreamHandler())
 
-DEBUG = True
+DEBUG = False
 if DEBUG:
     logger.setLevel(logging.DEBUG)
-    logger.addHandler(logging.StreamHandler())
+else:
+    logger.setLevel(logging.WARNING)
 
 
 class CharacterIdentifierError(Exception):
@@ -62,7 +64,7 @@ class Knave(Character):
     truth_quantifier = -1
 
 
-POSSIBLE_CHARACTERS = [Knight, Knave, Monk]
+POSSIBLE_CHARACTERS = {Knight, Knave, Monk}
 
 
 class Scenario:
@@ -119,7 +121,7 @@ class Scenario:
         TODO: This could be more efficient and less stupid.  ;)
         """
         character_string = "|"
-        for name, t in self.character_types.items():
+        for name, t in sorted(self.character_types):
             character_string += "{},{}|".format(name, t.short_identifier)
         return hash(character_string)
 
@@ -242,7 +244,7 @@ class IsOfType(Statement):
 
     def evaluate_truth(self, scenario: Scenario):
         try:
-            return isinstance(scenario.character_types[self.target_name], self.claimed_character_type)
+            return scenario.character_types[self.target_name] == self.claimed_character_type
         except KeyError:
             raise CharacterIdentifierError("Cannot find character '{}'.".format(self.target_name))
 
@@ -312,7 +314,7 @@ class SamenessCount(Statement):
 
 
 class Puzzle:
-    def __init__(self, character_names_and_statements: {str: [Statement]}):
+    def __init__(self, character_names_and_statements: {str: [Statement]}, allow_monks=True):
         self.scenarios = []
         self.character_names = []
         self.character_statements = {}
@@ -321,17 +323,19 @@ class Puzzle:
             self.character_names.append(character_name)
             self.character_statements[character_name] = statements
 
-        self.max_num_monks = self._calculate_max_num_monks()
+        self.max_num_monks = self._calculate_max_num_monks(allow_monks=allow_monks)
 
     @property
     def num_characters(self):
         return len(self.character_names)
 
-    def _calculate_max_num_monks(self):
+    def _calculate_max_num_monks(self, allow_monks):
         """
         Determines the maximum number of Monks allowed in a puzzle of this size.
         (Less than half the number of characters.)
         """
+        if allow_monks is False:
+            return 0
         max_num_monks = self.num_characters // 2
         if max_num_monks == self.num_characters / 2:
             max_num_monks -= 1
@@ -355,14 +359,19 @@ class Puzzle:
 
     def _generate_scenarios(self):
         self.scenarios = []  # Clears all scenarios first.
-        for identity_ordering in itertools.product(POSSIBLE_CHARACTERS, repeat=self.num_characters):
+        possible_characters = set(POSSIBLE_CHARACTERS)
+        if self.max_num_monks == 0:
+            # Optimizes product if no monks are allowed.
+            possible_characters.remove(Monk)
+        for identity_ordering in itertools.product(possible_characters, repeat=self.num_characters):
             try:
                 scenario = self._generate_scenario(identity_ordering)
             except TooManyMonksError:
                 continue
             self.scenarios.append(scenario)
 
-    def check_scenario(self, scenario, should_print=False):
+    @staticmethod
+    def check_scenario(scenario, should_print=DEBUG):
         result, reason = scenario.check_consistency()
         if should_print:
             if result:
@@ -371,7 +380,7 @@ class Puzzle:
                 if DEBUG is True:
                     print('----- \t{} \t ---> {}'.format(scenario, reason))
 
-    def generate_and_check_scenarios(self, should_print=False):
+    def generate_and_check_scenarios(self, should_print=DEBUG):
         self._generate_scenarios()
         for scenario in self.scenarios:
             self.check_scenario(scenario=scenario, should_print=should_print)
