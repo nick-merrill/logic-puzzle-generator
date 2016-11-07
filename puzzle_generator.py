@@ -171,14 +171,14 @@ class AbstractStatementCombiner(Statement):
         If returns None, loop will continue.  If returns other, evaluation is finished with this final value.
         :return: True | False | None
         """
-        raise NotImplementedError
+        pass
 
     @abc.abstractmethod
     def default_value(self):
         """
         :return: True | False
         """
-        raise NotImplementedError
+        pass
 
     def __init__(self, *statements: [Statement]):
         self.statements = statements
@@ -253,6 +253,33 @@ class IsOfType(Statement):
         return "{} is a {}.".format(self.target_name, self.claimed_character_type.title)
 
 
+class IsSameAs(Statement):
+    def __init__(self, target_1_name: str, target_2_name: str):
+        self.target_1_name = target_1_name
+        self.target_2_name = target_2_name
+
+    def evaluate_truth(self, scenario: Scenario):
+        try:
+            target_1_kind = scenario.character_types[self.target_1_name]
+        except KeyError:
+            raise CharacterIdentifierError("Cannot find character '{}'.".format(self.target_1_name))
+
+        try:
+            target_2_kind = scenario.character_types[self.target_2_name]
+        except KeyError:
+            raise CharacterIdentifierError("Cannot find character '{}'.".format(self.target_2_name))
+
+        return target_1_kind == target_2_kind
+
+    def as_sentence(self):
+        return "{} is the same as {}.".format(self.target_1_name, self.target_2_name)
+
+
+class TruthValueIs(Statement):
+    def __init__(self):
+        raise NotImplementedError
+
+
 def english_operator_helper(relation):
     if relation == operator.eq:
         return 'exactly'
@@ -321,6 +348,8 @@ class Puzzle:
         self.character_statements = {}
 
         for character_name, statements in character_names_and_statements.items():
+            if not isinstance(statements, list):
+                statements = [statements]
             self.character_names.append(character_name)
             self.character_statements[character_name] = statements
 

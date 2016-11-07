@@ -127,6 +127,14 @@ class TestBasicPuzzleElements(unittest.TestCase):
 
 
 class TestPuzzles(unittest.TestCase):
+    def assertPuzzleSolution(self, setup, solution_set, allow_monks=True):
+        p = Puzzle(setup, allow_monks=allow_monks)
+        p.generate_and_check_scenarios()
+        correct_scenarios = set()
+        for solution in solution_set:
+            correct_scenarios.add(Scenario(puzzle=p, character_types=solution))
+        self.assertSetEqual(p.get_consistent_scenario_set(), correct_scenarios)
+
     def test_lecture_1_puzzle(self):
         p = Puzzle({
             'A': [
@@ -149,15 +157,17 @@ class TestPuzzles(unittest.TestCase):
         })
         p.generate_and_check_scenarios()
         correct_scenarios = p.get_consistent_scenario_set()
-        self.assertSetEqual(correct_scenarios, {Scenario(puzzle=p, character_types={
-            'A': Knave,
-            'B': Knight,
-        })})
+        self.assertSetEqual(correct_scenarios, {
+            Scenario(puzzle=p, character_types={
+                'A': Knave,
+                'B': Knight,
+            }),
+        })
 
     def test_lecture_3_puzzle(self):
         p = Puzzle({
-            'Alfred': [CountOfType(Knight, 1, operator.eq)],
-            'Betty': [SamenessCount(3, operator.eq)],
+            'Alfred': CountOfType(Knight, 1, operator.eq),
+            'Betty': SamenessCount(3, operator.eq),
             'Clara': [],
         }, allow_monks=False)
         p.generate_and_check_scenarios()
@@ -167,5 +177,51 @@ class TestPuzzles(unittest.TestCase):
                 'Alfred': Knight,
                 'Betty': Knave,
                 'Clara': Knave,
-            })
+            }),
         })
+
+    def test_lecture_4_puzzle(self):
+        p = Puzzle({
+            'Alfred': IsSameAs('Betty', 'Clara'),
+            'Betty': Not(SamenessCount(3, operator.eq)),
+            'Clara': [],
+        }, allow_monks=False)
+        p.generate_and_check_scenarios()
+        correct_scenarios = p.get_consistent_scenario_set()
+        self.assertSetEqual(correct_scenarios, {
+            Scenario(puzzle=p, character_types={
+                'Alfred': Knave,
+                'Betty': Knight,
+                'Clara': Knave,
+            }),
+        })
+
+    def test_posted_solution_14(self):
+        self.assertPuzzleSolution({
+            'A': CountOfType(Knave, 3, operator.eq),
+            'B': CountOfType(Knave, 2, operator.eq),
+            'C': [],
+        }, [{
+            'A': Knave,
+            'B': Knight,
+            'C': Knave,
+        }], allow_monks=False)
+
+    def _test_posted_solution_15(self):
+        raise NotImplementedError
+
+    def test_posted_solution_17(self):
+        self.assertPuzzleSolution({
+            'A': DisjunctiveStatement(
+                CountOfType(Knave, 1, operator.eq),
+                CountOfType(Knave, 3, operator.eq),
+            ),
+            'B': IsSameAs('A', 'C'),
+            'C': Not(IsSameAs('A', 'D')),
+            'D': CountOfType(Knight, 1, operator.eq),
+        }, [{
+            'A': Knight,
+            'B': Knight,
+            'C': Knight,
+            'D': Knave,
+        }], allow_monks=False)
