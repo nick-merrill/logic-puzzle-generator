@@ -162,11 +162,15 @@ class Statement:
 
     @abc.abstractmethod
     def evaluate_truth(self, scenario: Scenario) -> True | False:
-        pass
+        raise NotImplementedError
 
     @abc.abstractmethod
     def as_sentence(self):
-        pass
+        raise NotImplementedError
+
+    @abc.abstractclassmethod
+    def generate_possibilities(cls, names, kinds):
+        raise NotImplementedError
 
     def __str__(self):
         return '{}'.format(self.as_sentence())
@@ -264,6 +268,13 @@ class IsOfType(Statement):
 
     def as_sentence(self):
         return "{} is a {}.".format(self.target_name, self.claimed_character_type.title)
+
+    @classmethod
+    def generate_possibilities(cls, names, kinds):
+        possibilities = []
+        for name, kind in itertools.product(names, kinds):
+            possibilities.append(cls(target_name=name, claimed_character_type=kind))
+        return possibilities
 
 
 class IsSameAs(Statement):
@@ -376,6 +387,14 @@ class SamenessCount(Statement):
             count=self.claimed_count,
         )
 
+    @classmethod
+    def generate_possibilities(cls, names, kinds):
+        ret = []
+        total = len(names)
+        ret.append(SamenessCount(total // 2, operator.le))
+        return ret
+
+
 
 class Puzzle:
     def __init__(self, character_names_and_statements: {str: [Statement]}, allow_monks=True):
@@ -477,6 +496,54 @@ class Puzzle:
     def get_puzzle_score(self):
         multiplier = MULTIPLIERS[self.num_characters]
 
+    def has_maximum_monks(self):
+        if not self.is_solved:
+            self.generate_and_check_scenarios()
+        for consistent_scenario in self.get_consistent_scenario_set():
+            assert(isinstance(consistent_scenario, Scenario))
+            monks = 0
+            for name, kind in consistent_scenario.character_types.items():
+                if kind == Monk:
+                    monks += 1
+            if monks == self.max_num_monks:
+                return True
+        return False
+
     def __str__(self):
         return self.character_names
+
+
+class PuzzleGenerator:
+    def __init__(self, character_names, possible_statement_kinds):
+        self.possible_names = ['A', 'B', 'C', 'D']
+        self.possible_statement_kinds = possible_statement_kinds
+
+    def generate_possible_statements(self):
+        statements = [[]]  # Allow characters to say nothing.
+        for statement_kind in self.possible_statement_kinds:
+            statements += statement_kind.generate_possibilities(self.possible_names, POSSIBLE_CHARACTERS)
+        return statements
+
+    def generate_puzzles(self):
+        statements = self.generate_possible_statements()
+
+        good_puzzles = []
+
+        possible_statement_combinations = (itertools.product(statements, repeat=4))
+        i = 0
+        for s in possible_statement_combinations:
+            puzzle = Puzzle({
+                self.possible_names[0]: DisjunctiveStatement(s[0], s[3]),
+                self.possible_names[1]: s[1],
+                self.possible_names[2]: s[2],
+                self.possible_names[3]: [],
+            })
+            if puzzle.is_valid_puzzle() and puzzle.get_solution_count() > 0 and puzzle.has_maximum_monks():
+                good_puzzles.append(puzzle)
+                print(puzzle.character_statements)
+                print(puzzle.get_consistent_scenario_set())
+                print("")
+            i += 1
+        print(len(good_puzzles), 'good puzzles found of ', i)
+
 

@@ -272,3 +272,5 @@ class TestPuzzles(unittest.TestCase):
             'C': Knight,
             'D': Knight,
         }], allow_monks=False)
+
+
