@@ -1,8 +1,19 @@
-from .puzzle_generator import *
+from package.puzzle_generator import *
 
 
 def main():
-    gen = PuzzleGenerator(['A', 'B', 'C', 'D'], [IsOfType, SamenessCount])
+    # print("Good ones")
+    # p1 = Puzzle({
+    #     'A': IfConnective(IsOfType('B', Knave), IsOfType('A', Knight)),
+    #     'B': IfConnective(IsOfType('')),
+    #     'C': [],
+    #     'D': [],
+    # })
+    # p1.generate_and_check_scenarios(should_print=True)
+    # print(p1.get_solution_count(), p1.get_total_possibilities())
+    # print("---------------")
+
+    gen = PuzzleGenerator(['A', 'B', 'C', 'D'], [SamenessCount, Honesty])
     gen.generate_puzzles()
 
 
