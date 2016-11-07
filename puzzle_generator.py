@@ -3,6 +3,8 @@ import itertools
 import operator
 import logging
 
+import functools
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 
@@ -11,6 +13,17 @@ if DEBUG:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.WARNING)
+
+
+MULTIPLIERS = {
+    7: 1,
+    6: 1.25,
+    5: 1.5,
+    4: 2,
+    3: 2.5,
+}
+CHARACTER_COUNT_BOUND = [3, 7]
+SOLUTION_COUNT_BOUND = [0, 2]
 
 
 class CharacterIdentifierError(Exception):
@@ -275,9 +288,32 @@ class IsSameAs(Statement):
         return "{} is the same as {}.".format(self.target_1_name, self.target_2_name)
 
 
-class TruthValueIs(Statement):
-    def __init__(self):
-        raise NotImplementedError
+def lookup(scenario: Scenario, *keys):
+    ret = []
+    for key in keys:
+        try:
+            ret.append(scenario.character_types[key])
+        except KeyError:
+            raise CharacterIdentifierError("Cannot find character '{}'.".format(key))
+    return tuple(ret)
+
+
+class Honesty(Statement):
+    def __init__(self, target_1_name, target_2_name, claimed_relation):
+        self.target_1_name = target_1_name
+        self.target_2_name = target_2_name
+        self.claimed_relation = claimed_relation
+
+    def evaluate_truth(self, scenario: Scenario):
+        target_1_kind, target_2_kind = lookup(scenario, self.target_1_name, self.target_2_name)
+        return self.claimed_relation(target_1_kind.truth_quantifier, target_2_kind.truth_quantifier)
+
+    def as_sentence(self):
+        return "{}'s honesty is {} {}'s honesty.".format(
+            self.target_1_name,
+            english_operator_helper(self.claimed_relation),
+            self.target_2_name,
+        )
 
 
 def english_operator_helper(relation):
@@ -343,6 +379,7 @@ class SamenessCount(Statement):
 
 class Puzzle:
     def __init__(self, character_names_and_statements: {str: [Statement]}, allow_monks=True):
+        self.is_solved = False
         self.scenarios = []
         self.character_names = []
         self.character_statements = {}
@@ -400,8 +437,8 @@ class Puzzle:
                 continue
             self.scenarios.append(scenario)
 
-    @staticmethod
-    def check_scenario(scenario, should_print=DEBUG):
+    @functools.lru_cache()
+    def check_scenario(self, scenario, should_print=DEBUG):
         result, reason = scenario.check_consistency()
         if should_print:
             if result:
@@ -411,10 +448,13 @@ class Puzzle:
                     print('----- \t{} \t ---> {}'.format(scenario, reason))
 
     def generate_and_check_scenarios(self, should_print=DEBUG):
-        self._generate_scenarios()
+        if len(self.scenarios) == 0:
+            self._generate_scenarios()
         for scenario in self.scenarios:
             self.check_scenario(scenario=scenario, should_print=should_print)
+        self.is_solved = True
 
+    @functools.lru_cache()
     def get_consistent_scenario_set(self):
         ret = set()
         for scenario in self.scenarios:
@@ -422,5 +462,21 @@ class Puzzle:
                 ret.add(scenario)
         return ret
 
+    @functools.lru_cache()
+    def get_solution_count(self):
+        if not self.is_solved:
+            self.generate_and_check_scenarios()
+        return len(self.get_consistent_scenario_set())
+
+    def is_valid_puzzle(self):
+        return (
+            (CHARACTER_COUNT_BOUND[0] <= self.num_characters <= CHARACTER_COUNT_BOUND[1])
+            and (SOLUTION_COUNT_BOUND[0] <= self.get_solution_count() <= SOLUTION_COUNT_BOUND[1])
+        )
+
+    def get_puzzle_score(self):
+        multiplier = MULTIPLIERS[self.num_characters]
+
     def __str__(self):
         return self.character_names
+

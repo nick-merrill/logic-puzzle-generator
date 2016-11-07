@@ -134,6 +134,7 @@ class TestPuzzles(unittest.TestCase):
         for solution in solution_set:
             correct_scenarios.add(Scenario(puzzle=p, character_types=solution))
         self.assertSetEqual(p.get_consistent_scenario_set(), correct_scenarios)
+        self.assertEqual(p.get_solution_count(), len(correct_scenarios))
 
     def test_lecture_1_puzzle(self):
         p = Puzzle({
@@ -207,8 +208,16 @@ class TestPuzzles(unittest.TestCase):
             'C': Knave,
         }], allow_monks=False)
 
-    def _test_posted_solution_15(self):
-        raise NotImplementedError
+    def test_posted_solution_15(self):
+        self.assertPuzzleSolution({
+            'A': Honesty('B', 'C', operator.ge),
+            'B': Honesty('C', 'A', operator.ge),
+            'C': Honesty('A', 'B', operator.ge),
+        }, [{
+            'A': Knight,
+            'B': Knight,
+            'C': Knight,
+        }], allow_monks=False)
 
     def test_posted_solution_17(self):
         self.assertPuzzleSolution({
@@ -224,4 +233,42 @@ class TestPuzzles(unittest.TestCase):
             'B': Knight,
             'C': Knight,
             'D': Knave,
+        }], allow_monks=False)
+
+    def test_posted_solution_18(self):
+        self.assertPuzzleSolution({
+            'A': DisjunctiveStatement(
+                ConjunctiveStatement(
+                    IsOfType('A', Knight),
+                    CountOfType(Knight, 2, operator.ge),
+                ),
+                ConjunctiveStatement(
+                    IsOfType('A', Knave),
+                    CountOfType(Knave, 2, operator.ge)
+                )
+            ),
+            'B': CountOfType(Knight, 2, operator.eq),
+            'C': DisjunctiveStatement(
+                IsOfType('A', Knight),
+                IsOfType('D', Knight),
+            ),
+            'D': [],
+        }, [{
+            'A': Knight,
+            'B': Knave,
+            'C': Knight,
+            'D': Knight,
+        }], allow_monks=False)
+
+    def test_posted_solution_19(self):
+        self.assertPuzzleSolution({
+            'A': CountOfType(Knight, 2, operator.gt),
+            'B': CountOfType(Knave, 2, operator.gt),
+            'C': Honesty('B', 'A', operator.ge),
+            'D': [],
+        }, [{
+            'A': Knave,
+            'B': Knave,
+            'C': Knight,
+            'D': Knight,
         }], allow_monks=False)
