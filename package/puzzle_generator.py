@@ -145,7 +145,9 @@ class Scenario:
 
     def __str__(self, joiner=" \t "):
         names_and_identities = []
-        for name, character_type in self.character_types.items():
+        ordered_character_names = sorted(self.character_types.keys())
+        for name in ordered_character_names:
+            character_type = self.character_types[name]
             names_and_identities.append("{}={}".format(name, character_type.short_identifier))
         return joiner.join(names_and_identities)
 
@@ -420,21 +422,24 @@ class ExclusiveOrConnective(AbstractConnective):
 
 class SamenessCount(Statement):
     def __init__(self, claimed_count: int, claimed_relation):
+        raise NotImplementedError("SamenessCount isn't working properly yet.")
+
         self.claimed_count = claimed_count
         self.claimed_relation = claimed_relation
 
-        satisfying_statements = []
+        # FIXME: This allow a single character type to satisfy the condition. All character types must satisfy the condition.
+        required_statements_to_satisfy = []
         for kind in POSSIBLE_CHARACTERS:
-            satisfying_statements.append(
+            required_statements_to_satisfy.append(
                 CountOfType(kind, self.claimed_count, self.claimed_relation)
             )
-        self.disjunctive_statement = DisjunctiveStatement(*satisfying_statements)
+        self.conjunctive_statement = ConjunctiveStatement(*required_statements_to_satisfy)
 
     def evaluate_truth(self, scenario: Scenario):
         """
         If one of the possible character types satisfies this statement, then it is true.
         """
-        return self.disjunctive_statement.evaluate_truth(scenario=scenario)
+        return self.conjunctive_statement.evaluate_truth(scenario=scenario)
 
     def as_sentence(self):
         return "{op} {count} of us are the same.".format(
@@ -448,6 +453,37 @@ class SamenessCount(Statement):
         total = len(names)
         ret.append(SamenessCount(total // 2, operator.le))
         return ret
+
+
+class AllTheSame(Statement):
+    def evaluate_truth(self, scenario: Scenario):
+        kind = None
+        for cur in scenario.character_types.values():
+            if kind is not None:
+                if cur != kind:
+                    return False
+            kind = cur
+        return True
+
+    def as_sentence(self):
+        return "All of us are the same."
+
+
+class AllDifferent(Statement):
+    def evaluate_truth(self, scenario: Scenario):
+        """
+        If any distinct two are the same, returns False.
+        """
+        for n1, k1 in scenario.character_types.items():
+            for n2, k2 in scenario.character_types.items():
+                if n1 == n2:
+                    continue
+                if k1 == k2:
+                    return False
+        return True
+
+    def as_sentence(self):
+        return "All of us are different."
 
 
 class Puzzle:
@@ -469,11 +505,13 @@ class Puzzle:
     def num_characters(self):
         return len(self.character_names)
 
-    def print_character_statements(self, file=None):
-        for name in self.character_names:
-            print(name, file=file)
+    def get_character_statements_as_string(self):
+        ret = ""
+        for name in sorted(self.character_names):
+            ret += "{}\n".format(name)
             for statement in self.character_statements[name]:
-                print("\t {}".format(statement), file=file)
+                ret += "\t {}\n".format(statement)
+        return ret
 
     def _calculate_max_num_monks(self, allow_monks):
         """
@@ -595,7 +633,7 @@ class PuzzleGenerator:
 
         return statements
 
-    def generate_puzzles(self):
+    def generate_puzzles(self, to_file=True):
         statements = self.generate_possible_statements()
 
         good_puzzles = []
@@ -648,7 +686,9 @@ class PuzzleGenerator:
                 continue
             good_puzzles.append(puzzle)
             with open(os.path.join(os.path.curdir, 'good_puzzles_auto.txt'), 'a') as file:
-                puzzle.print_character_statements(file=file)
+                if to_file is False:
+                    file = None
+                print(puzzle.get_character_statements_as_string(), file=file)
                 print(puzzle.get_consistent_scenario_set(), file=file)
 
         print(len(good_puzzles), 'good puzzles found of ', i)
