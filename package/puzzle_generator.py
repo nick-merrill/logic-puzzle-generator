@@ -18,7 +18,6 @@ if DEBUG:
 else:
     logger.setLevel(logging.WARNING)
 
-
 MULTIPLIERS = {
     7: 1,
     6: 1.25,
@@ -188,6 +187,9 @@ class TrueStatement(Statement):
 class AbstractStatementCombiner(Statement):
     joining_string = " --- "
 
+    def __init__(self, *statements: [Statement]):
+        self.statements = statements
+
     @abc.abstractmethod
     def for_each_statement(self, truth_value):
         """
@@ -202,9 +204,6 @@ class AbstractStatementCombiner(Statement):
         :return: True | False
         """
         pass
-
-    def __init__(self, *statements: [Statement]):
-        self.statements = statements
 
     def evaluate_truth(self, scenario: Scenario):
         logger.debug("Evaluating truth of [{}] ".format(self))
@@ -250,6 +249,9 @@ class DisjunctiveStatement(AbstractStatementCombiner):
 
 
 class Not(Statement):
+    """
+    True if and only if the passed statement is False.
+    """
     def __init__(self, statement: Statement):
         self.statement = statement
 
@@ -262,6 +264,9 @@ class Not(Statement):
 
 
 class IsOfType(Statement):
+    """
+    True if and only if the named target is of the claimed character type.
+    """
     def __init__(self, target_name: str, claimed_character_type):
         self.target_name = target_name
         self.claimed_character_type = claimed_character_type
