@@ -486,6 +486,8 @@ class Puzzle:
         self.character_statements = {}
 
         for character_name, statements in character_names_and_statements.items():
+            if statements is None:
+                statements = []
             if not isinstance(statements, list):
                 statements = [statements]
             self.character_names.append(character_name)
@@ -504,6 +506,11 @@ class Puzzle:
             for statement in self.character_statements[name]:
                 ret += "\t {}\n".format(statement)
         return ret
+
+    def print_puzzle_with_solutions(self):
+        print(self.get_character_statements_as_string())
+        print(self.get_solution_count(), 'possible solutions exist')
+        self.generate_and_check_scenarios(should_print=True)
 
     def _calculate_max_num_monks(self, allow_monks):
         """
