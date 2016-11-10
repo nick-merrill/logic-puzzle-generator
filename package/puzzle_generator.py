@@ -102,18 +102,10 @@ class Scenario:
         for character_name, statements in self.puzzle.character_statements.items():
             speaking_character_type = self.character_types[character_name]
 
-            # In order to simplify the complexity of nested statements for debugging, we try not to over-encapsulate.
-            statement_count = len(statements)
-            if statement_count == 0:
-                continue
-            elif statement_count == 1:
-                statement = statements[0]
-            else:  # statement_count > 1
-                # Note: All statements this character says must make sense independently.
-                statement = ConjunctiveStatement(*statements)
-
-            if statement.evaluate_consistency(speaking_character_type=speaking_character_type, scenario=self) is False:
-                return False, '{} should not have said "{}".'.format(character_name, statement)
+            # Note: Each of the statements this character says must be consistent independently.
+            for statement in statements:
+                if statement.evaluate_consistency(speaking_character_type=speaking_character_type, scenario=self) is False:
+                    return False, '{} should not have said "{}".'.format(character_name, statement)
         return True, None
 
     def check_consistency(self):

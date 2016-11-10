@@ -138,10 +138,7 @@ class TestPuzzles(unittest.TestCase):
 
     def test_lecture_1_puzzle(self):
         p = Puzzle({
-            'A': [
-                IsOfType('A', Knave),
-                IsOfType('B', Knave),
-            ],
+            'A': ConjunctiveStatement(IsOfType('A', Knave), IsOfType('B', Knave)),
             'B': [],
         })
         p.generate_and_check_scenarios()
@@ -279,6 +276,21 @@ class TestPuzzles(unittest.TestCase):
             'B': Honesty('A', 'B', operator.gt),
             'C': SamenessCount(1, operator.le),
         }, [{
+        }])
+
+    def test_some_quiz_1(self):
+        self.assertPuzzleSolution({
+            'A': [DisjunctiveStatement(AllTheSame(), AllDifferent()), Honesty('B', 'C', operator.gt)],
+            'B': DisjunctiveStatement(AllTheSame(), CountOfType(Monk, 0, operator.eq)),
+            'C': DisjunctiveStatement(AllTheSame(), CountOfType(Monk, 1, operator.eq)),
+        }, [{
+            'A': Monk,
+            'B': Knave,
+            'C': Knight,
+        }, {
+            'A': Knave,
+            'B': Knave,
+            'C': Monk,
         }])
 
 
