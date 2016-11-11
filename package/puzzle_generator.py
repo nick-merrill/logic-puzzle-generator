@@ -2,6 +2,8 @@ import abc
 import itertools
 import operator
 import logging
+
+import time
 from tqdm import tqdm
 
 import functools
@@ -159,15 +161,24 @@ class Statement:
 
     @abc.abstractmethod
     def evaluate_truth(self, scenario: Scenario) -> True | False:
-        raise NotImplementedError
+        raise NotImplementedError(type(self).__name__)
 
     @abc.abstractmethod
     def as_sentence(self):
-        raise NotImplementedError
+        raise NotImplementedError(type(self).__name__)
 
     @abc.abstractclassmethod
     def generate_possibilities(cls, names, kinds):
-        raise NotImplementedError
+        raise NotImplementedError(cls.__name__)
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+        return self.is_equal_to_instance(other)
+
+    @abc.abstractmethod
+    def is_equal_to_instance(self, other):
+        raise NotImplementedError(type(self).__name__)
 
     def __str__(self):
         return '{}'.format(self.as_sentence())
@@ -287,6 +298,10 @@ class IsOfType(Statement):
             possibilities.append(cls(target_name=name, claimed_character_type=kind))
         return possibilities
 
+    def is_equal_to_instance(self, other):
+        assert isinstance(other, IsOfType)
+        return self.target_name == other.target_name and self.claimed_character_type == other.claimed_character_type
+
 
 class IsSameAs(Statement):
     def __init__(self, target_1_name: str, target_2_name: str):
@@ -308,6 +323,17 @@ class IsSameAs(Statement):
 
     def as_sentence(self):
         return "{} is the same as {}.".format(self.target_1_name, self.target_2_name)
+
+    @classmethod
+    def generate_possibilities(cls, names, kinds):
+        ret = []
+        for n1, n2 in itertools.combinations(names, 2):
+            ret.append(IsSameAs(n1, n2))
+        return ret
+
+    def is_equal_to_instance(self, other):
+        assert(isinstance(other, IsSameAs))
+        return self.target_1_name == other.target_1_name and self.target_2_name == other.target_2_name
 
 
 def lookup(scenario: Scenario, *keys):
@@ -345,6 +371,14 @@ class Honesty(Statement):
             ret.append(Honesty(a, b, op))
         return ret
 
+    def is_equal_to_instance(self, other):
+        assert(isinstance(other, Honesty))
+        return (
+            self.target_1_name == other.target_1_name
+            and self.target_2_name == other.target_2_name
+            and self.claimed_relation == other.claimed_relation
+        )
+
 
 def english_operator_helper(relation):
     if relation == operator.eq:
@@ -379,6 +413,22 @@ class CountOfType(Statement):
             op=english_operator_helper(self.claimed_relation),
             count=self.claimed_count,
             kind=self.character_type.title,
+        )
+
+    @classmethod
+    def generate_possibilities(cls, names, kinds):
+        ret = []
+        count = len(names) // 2
+        for kind in kinds:
+            ret.append(CountOfType(kind, count, operator.le))
+        return ret
+
+    def is_equal_to_instance(self, other):
+        assert(isinstance(other, CountOfType))
+        return (
+            self.character_type == other.character_type
+            and self.claimed_count == other.claimed_count
+            and self.claimed_relation == other.claimed_relation
         )
 
 
@@ -507,9 +557,9 @@ class Puzzle:
     def get_character_statements_as_string(self):
         ret = ""
         for name in sorted(self.character_names):
-            ret += "{}\n".format(name)
+            ret += "\n{}".format(name)
             for statement in self.character_statements[name]:
-                ret += "\t {}\n".format(statement)
+                ret += "\n\t {}".format(statement)
         return ret
 
     def print_puzzle_with_solutions(self):
@@ -641,22 +691,30 @@ class PuzzleGenerator:
         statements = self.generate_possible_statements()
 
         good_puzzles = []
+        valid_puzzle_count = 0  # A valid puzzle has 0, 1, or 2 solutions.
 
-        statements_needed = 3
+        statements_needed = 3  # Generates the combination of this many statements for `s`.
         possible_statement_combinations = itertools.permutations(statements, statements_needed)
         total_count = math.factorial(len(statements)) / math.factorial(len(statements) - statements_needed)
         print(len(statements), total_count)
         i = 0
-        EARLY_BREAK = 1
+        EARLY_BREAK = 0.5
         progress = tqdm(total=total_count * EARLY_BREAK)
+
+        def update_progress():
+            progress.update()
+            progress.set_description("{good:0.1f}% good // {valid:0.1f}% valid".format(
+                good=len(good_puzzles) / i * 100,
+                valid=valid_puzzle_count / i * 100,
+            ))
+
         for s in possible_statement_combinations:
             i += 1
 
             if i/total_count > EARLY_BREAK:
                 break
 
-            progress.update()
-            progress.set_description("{0:0.1f}% good puzzles".format(len(good_puzzles) / i * 100))
+            update_progress()
 
             # Don't say IsA statements about yourself.
             # def check_is_a():
@@ -666,15 +724,28 @@ class PuzzleGenerator:
             # if check_is_a():
             #     continue
 
-            # TODO: Don't use the same statement twice.
-
+            # puzzle = Puzzle({
+            #     self.possible_names[0]: IfConnective(Not(IsOfType('A', Monk)), s[3]),
+            #     self.possible_names[1]: IfConnective(s[1], s[4]),
+            #     self.possible_names[2]: IfConnective(s[2], s[0]),
+            # })
             puzzle = Puzzle({
                 self.possible_names[0]: s[0],
                 self.possible_names[1]: s[1],
                 self.possible_names[2]: s[2],
             })
-            if not (puzzle.is_valid_puzzle()
-                    and puzzle.get_solution_count() == 2
+            # Restrictions to hopefully make puzzle harder.
+            if not puzzle.is_valid_puzzle():
+                continue
+            valid_puzzle_count += 1
+
+            # Don't use the same statement twice.
+            # Note: This check will pass if permutations were used above, as opposed to products.
+            for s1, s2 in itertools.product(s, repeat=2):
+                if s1 == s2:
+                    continue
+
+            if not (puzzle.get_solution_count() == 2
                     and puzzle.has_maximum_monks()):
                 continue
 
@@ -686,7 +757,8 @@ class PuzzleGenerator:
             for name in sol_a.keys():
                 if sol_a[name] != sol_b[name]:
                     difference += 1
-            if difference < 3:
+            # Make sure all characters differ in both solutions.  (To hopefully result in more difficult puzzles.)
+            if difference < len(puzzle.character_names):
                 continue
             good_puzzles.append(puzzle)
             with open(os.path.join(os.path.curdir, 'good_puzzles_auto.txt'), 'a') as file:
@@ -695,5 +767,8 @@ class PuzzleGenerator:
                 print(puzzle.get_character_statements_as_string(), file=file)
                 print(puzzle.get_consistent_scenario_set(), file=file)
 
-        print(len(good_puzzles), 'good puzzles found of ', i)
-        print(len(good_puzzles) / i * 100)
+        update_progress()
+        time.sleep(0.5)  # Give progress bar time to update.
+        progress.disable = True
+        print('\n', len(good_puzzles), 'good puzzles found of', i)
+        print('valid count', valid_puzzle_count)
