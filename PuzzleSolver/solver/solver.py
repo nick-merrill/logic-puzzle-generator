@@ -18,61 +18,163 @@ def main():
     #     ),
     # })
 
+    p=Puzzle({
+'A': [
+IfConnective(
+Not(Biconditional(
+IsOfType('D', Monk),
+IsOfType('B', Knight)
+)),
+Biconditional(
+IsOfType('D', Knight),
+CountOfType(Monk, 2, operator.le)
+)
+),
+],
+'B': [
+DisjunctiveStatement(
+Biconditional(
+Honesty('B', 'C', operator.le),
+IsOfType('B', Monk)
+),
+Not(Biconditional(
+CountOfType(Knight, 2, operator.le),
+IsSameAs('A', 'D')
+))
+),
+],
+'C': [
+DisjunctiveStatement(
+ConjunctiveStatement(
+IsOfType('C', Knave),
+IsSameAs('A', 'B')
+),
+ConjunctiveStatement(
+IsSameAs('C', 'D'),
+IsOfType('A', Knight)
+)
+),
+],
+'D': [
+ConjunctiveStatement(
+DisjunctiveStatement(
+IsSameAs('A', 'C'),
+Not(Honesty('C', 'D', operator.le))
+),
+DisjunctiveStatement(
+IsOfType('D', Knave),
+Not(Honesty('A', 'B', operator.le))
+)
+),
+],
+})
+
+    p=Puzzle({
+        'A': [
+            IfConnective(
+                Not(Biconditional(
+                    IsOfType('A', Knight),
+                    IsOfType('C', Monk)
+                )),
+                Biconditional(
+                    CountOfType(Monk, 2, operator.le),
+                    Honesty('A', 'B', operator.le)
+                )
+            ),
+        ],
+        'B': [
+            DisjunctiveStatement(
+                Biconditional(
+                    IsOfType('D', Monk),
+                    IsOfType('C', Knight)
+                ),
+                Not(Biconditional(
+                    Honesty('C', 'D', operator.le),
+                    Honesty('A', 'C', operator.le)
+                ))
+            ),
+        ],
+        'C': [
+            DisjunctiveStatement(
+                ConjunctiveStatement(
+                    IsOfType('A', Monk),
+                    Honesty('B', 'D', operator.le)
+                ),
+                ConjunctiveStatement(
+                    IsOfType('C', Knave),
+                    CountOfType(Knight, 2, operator.le)
+                )
+            ),
+        ],
+        'D': [
+            ConjunctiveStatement(
+                DisjunctiveStatement(
+                    IsSameAs('B', 'D'),
+                    Not(IsSameAs('A', 'B'))
+                ),
+                DisjunctiveStatement(
+                    IsOfType('D', Knave),
+                    Not(IsSameAs('A', 'D'))
+                )
+            ),
+        ],
+    })
+
     p = Puzzle({
-        'D': DisjunctiveStatement(
-            CountOfType(Knight, 2, operator.eq),
-            CountOfType(Knight, 4, operator.eq)
-        ),
+        'Betty': [
+            IfConnective(
+                Not(Biconditional(
+                    Honesty('Bob', 'Bill', operator.le),
+                    Honesty('Bob', 'Brittany', operator.le)
+                )),
+                Biconditional(
+                    IsSameAs('Bob', 'Brittany'),
+                    CountOfType(Knave, 2, operator.le)
+                )
+            ),
+        ],
+        'Bob': [
+            IfConnective(
+                Biconditional(
+                    Honesty('Bill', 'Betty', operator.le),
+                    IsSameAs('Betty', 'Bill')
+                ),
+                Not(Biconditional(
+                    Honesty('Bob', 'Betty', operator.le),
+                    IsSameAs('Bob', 'Bill')
+                ))
+            ),
+        ],
+        'Brittany': [
+            IfConnective(
+                Not(Biconditional(
+                    Honesty('Brittany', 'Bill', operator.le),
+                    Honesty('Bill', 'Bob', operator.le)
+                )),
+                Biconditional(
+                    IsSameAs('Betty', 'Bob'),
+                    Honesty('Brittany', 'Betty', operator.le)
+                )
+            ),
+        ],
+        'Bill': [
+            IfConnective(
+                Biconditional(
+                    IsSameAs('Betty', 'Brittany'),
+                    Not(Honesty('Brittany', 'Bob', operator.le))
+                ),
+                Not(Biconditional(
+                    CountOfType(Knight, 2, operator.le),
+                    Not(Honesty('Bill', 'Brittany', operator.le))
+                ))
+            ),
+        ],
     })
 
     p.solve(save_work_to_csv='test.csv')
 
     p.print_puzzle_with_solutions()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    Puzzle({
-        'A': [
-            DisjunctiveStatement(
-                ConjunctiveStatement(IsOfType('B', Monk), IsOfType('C', Knave)),
-                ConjunctiveStatement(IsOfType('B', Knave), IsOfType('C', Monk)),
-            ),
-            Honesty('C', 'D', operator.gt),
-        ],
-        'B': [
-            DisjunctiveStatement(
-                ConjunctiveStatement(IsOfType('C', Monk), IsOfType('D', Knave)),
-                ConjunctiveStatement(IsOfType('C', Knave), IsOfType('D', Monk)),
-            ),
-            DisjunctiveStatement(
-                AllTheSame(),
-                CountOfType(Knight, 1, operator.ge),
-            )
-        ],
-        'C': DisjunctiveStatement(
-            ConjunctiveStatement(IsOfType('D', Monk), IsOfType('A', Knave)),
-            ConjunctiveStatement(IsOfType('D', Knave), IsOfType('A', Monk)),
-        ),
-        'D': DisjunctiveStatement(
-            ConjunctiveStatement(IsOfType('A', Monk), IsOfType('B', Knave)),
-            ConjunctiveStatement(IsOfType('A', Knave), IsOfType('B', Monk)),
-        ),
-    }).print_puzzle_with_solutions()
+    p.print_puzzle_statistics()
 
 
 if __name__ == '__main__':

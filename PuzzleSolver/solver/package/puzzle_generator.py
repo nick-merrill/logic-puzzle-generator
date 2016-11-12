@@ -93,12 +93,22 @@ POSSIBLE_CHARACTERS = {Knight, Knave, Monk}
 
 
 class Reason:
-    def __init__(self, character_name, statement):
+    def __init__(self, character_name: str, statement):
         self.character_name = character_name
         self.statement = statement
 
+    def __eq__(self, other):
+        assert(isinstance(other, Reason))
+        return self.character_name == other.character_name and self.statement == other.statement
+
+    def __hash__(self):
+        return hash("{}||{}".format(self.character_name, hash(self.statement)))
+
     def __str__(self):
         return "{} should not have said {}".format(self.character_name, self.statement)
+
+    def __repr__(self):
+        return "<Reason: {}>".format(str(self))
 
 
 class Scenario:
@@ -167,6 +177,13 @@ class Scenario:
 
 
 class Statement:
+    def code_repr(self):
+        return "{}({})".format(type(self).__name__, self.code_repr_instantiation())
+
+    @abc.abstractmethod
+    def code_repr_instantiation(self):
+        raise NotImplementedError(type(self).__name__)
+
     def evaluate_consistency(self, speaking_character_type, scenario: Scenario):
         logger.debug('Evaluating consistency of "{}" as {}'.format(self, speaking_character_type.title))
         if speaking_character_type == Monk:
@@ -190,7 +207,7 @@ class Statement:
         raise NotImplementedError(cls.__name__)
 
     def __eq__(self, other):
-        if not isinstance(other, type(self)):
+        if other is None or not isinstance(other, type(self)):
             return False
         return self.is_equal_to_instance(other)
 
@@ -204,9 +221,18 @@ class Statement:
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, str(self))
 
+    def __hash__(self):
+        return hash(repr(self))
+
 
 class TrueStatement(Statement):
     def evaluate_truth(self, scenario: Scenario):
+        return True
+
+    def code_repr_instantiation(self):
+        return ""
+
+    def is_equal_to_instance(self, other):
         return True
 
     def as_sentence(self):
@@ -218,6 +244,9 @@ class AbstractStatementCombiner(Statement):
 
     def __init__(self, *statements: [Statement]):
         self.statements = statements
+
+    def code_repr(self):
+        return "{}(\n{}\n)".format(type(self).__name__, ',\n'.join([s.code_repr() for s in self.statements]))
 
     @abc.abstractmethod
     def for_each_statement(self, truth_value):
@@ -242,6 +271,13 @@ class AbstractStatementCombiner(Statement):
             if result is not None:
                 return result
         return self.default_value()
+
+    def is_equal_to_instance(self, other):
+        assert(isinstance(other, AbstractStatementCombiner))
+        for s1, s2 in itertools.zip_longest(self.statements, other.statements):
+            if s1 != s2:
+                return False
+        return True
 
     def __str__(self):
         return self.joining_string.join(map(lambda s: '({})'.format(s), self.statements))
@@ -284,9 +320,16 @@ class Not(Statement):
     def __init__(self, statement: Statement):
         self.statement = statement
 
+    def code_repr(self):
+        return "{}({})".format(type(self).__name__, self.statement.code_repr())
+
     def evaluate_truth(self, scenario: Scenario):
         truth = self.statement.evaluate_truth(scenario=scenario)
         return not truth
+
+    def is_equal_to_instance(self, other):
+        assert(isinstance(other, Not))
+        return self.statement == other.statement
 
     def __str__(self):
         return "NOT({})".format(self.statement)
@@ -299,6 +342,9 @@ class IsOfType(Statement):
     def __init__(self, target_name: str, claimed_character_type):
         self.target_name = target_name
         self.claimed_character_type = claimed_character_type
+
+    def code_repr_instantiation(self):
+        return "'{}', {}".format(self.target_name, self.claimed_character_type.__name__)
 
     def evaluate_truth(self, scenario: Scenario):
         try:
@@ -325,6 +371,9 @@ class IsSameAs(Statement):
     def __init__(self, target_1_name: str, target_2_name: str):
         self.target_1_name = target_1_name
         self.target_2_name = target_2_name
+
+    def code_repr_instantiation(self):
+        return "'{}', '{}'".format(self.target_1_name, self.target_2_name)
 
     def evaluate_truth(self, scenario: Scenario):
         try:
@@ -370,6 +419,9 @@ class Honesty(Statement):
         self.target_2_name = target_2_name
         self.claimed_relation = claimed_relation
 
+    def code_repr_instantiation(self):
+        return "'{}', '{}', operator.{}".format(self.target_1_name, self.target_2_name, self.claimed_relation.__name__)
+
     def evaluate_truth(self, scenario: Scenario):
         target_1_kind, target_2_kind = lookup(scenario, self.target_1_name, self.target_2_name)
         return self.claimed_relation(target_1_kind.truth_quantifier, target_2_kind.truth_quantifier)
@@ -383,7 +435,7 @@ class Honesty(Statement):
 
     @classmethod
     def generate_possibilities(cls, names, kinds):
-        name_combinations = itertools.combinations(names, 2)
+        name_combinations = itertools.permutations(names, 2)
         ret = []
         for (a, b) in name_combinations:
             ret.append(Honesty(a, b, operator.le))
@@ -418,6 +470,9 @@ class CountOfType(Statement):
         self.character_type = character_type
         self.claimed_count = claimed_count
         self.claimed_relation = claimed_relation
+
+    def code_repr_instantiation(self):
+        return "{}, {}, operator.{}".format(self.character_type.__name__, self.claimed_count, self.claimed_relation.__name__)
 
     def evaluate_truth(self, scenario: Scenario):
         count = 0
@@ -455,6 +510,9 @@ class AbstractConnective(Statement):
         self.a = a
         self.b = b
 
+    def code_repr(self):
+        return "{}(\n{},\n{}\n)".format(type(self).__name__, self.a.code_repr(), self.b.code_repr())
+
     @staticmethod
     @abc.abstractstaticmethod
     def evaluate_connective(a: bool, b: bool):
@@ -466,6 +524,10 @@ class AbstractConnective(Statement):
             self.b.evaluate_truth(scenario=scenario)
         )
 
+    def is_equal_to_instance(self, other):
+        assert(isinstance(other, AbstractConnective))
+        return self.a == other.a and self.b == other.b
+
 
 class IfConnective(AbstractConnective):
     @staticmethod
@@ -473,7 +535,7 @@ class IfConnective(AbstractConnective):
         return (not a) or b
 
     def as_sentence(self):
-        return "{} only if {}.".format(self.a, self.b)
+        return "If {}, then {}.".format(self.a, self.b)
 
 
 class Biconditional(AbstractConnective):
@@ -566,8 +628,10 @@ class Puzzle:
         self.scenarios = []
         self.character_names = []
         self.character_statements = {}
-        self._rejection_reasons = []  # type: List[Reason]
+        self._rejection_reason_lists = []  # type: List[List[Reason]]
         self._reason_count_per_scenario = -1  # type: List[int]
+        self._number_of_characters_uniquely_eliminating_scenario = 0
+        self._score = None
 
         for character_name, statements in character_names_and_statements.items():
             if statements is None:
@@ -637,7 +701,6 @@ class Puzzle:
                 continue
             self.scenarios.append(scenario)
 
-    @functools.lru_cache()
     def check_scenario(self, scenario, should_print=DEBUG):
         result, reasons = scenario.check_consistency()
         if should_print:
@@ -651,15 +714,28 @@ class Puzzle:
     def solve(self, should_print=DEBUG, save_work_to_csv=None):
         if len(self.scenarios) == 0:
             self._generate_scenarios()
-        self._rejection_reasons = []
+        self._rejection_reason_lists = []
         scenarios, results, reasons = [], [], []
         reason_counts = []
+        unique_characters = set()
         for scenario in self.scenarios:
             is_scenario_consistent, scenario_reasons = self.check_scenario(scenario=scenario, should_print=should_print)
             if save_work_to_csv:
                 scenarios.append(scenario)
                 results.append(is_scenario_consistent)
-            reason_counts.append(len(scenario_reasons))
+            character_giveaways_count = {n: 0 for n in self.character_names}
+            for r in scenario_reasons:
+                assert(isinstance(r, Reason))
+                character_giveaways_count[r.character_name] += 1
+            c = len(self.character_names)
+            for a in character_giveaways_count.values():
+                if a > 0:
+                    c -= 1
+            reason_counts.append(c)
+            if c == 1:
+                for name, value in character_giveaways_count.items():
+                    if value == 0:
+                        unique_characters.add(name)
             reasons.append(scenario_reasons)  # We'll use the reasons even if not saving to CSV.
         if save_work_to_csv:
             with open(save_work_to_csv, 'w') as f:
@@ -676,6 +752,7 @@ class Puzzle:
                         header_row += [
                             'Result',
                             'Explanation',
+                            'Inconsistent Characters',
                         ]
                         writer.writerow(header_row)
                     row = []
@@ -686,13 +763,24 @@ class Puzzle:
                     row.append('Consistent' if is_scenario_consistent else 'Inconsistent')
                     if scenario_reasons:
                         row.append(scenario_reasons)
+                        inconsistent_characters = set()
+                        for r in scenario_reasons:
+                            inconsistent_characters.add(r.character_name)
+                        row.append(", ".join(list(inconsistent_characters)))
                     writer.writerow(row)
                     i += 1
-        self._rejection_reasons = reasons
+        self._rejection_reason_lists = reasons
         self._reason_count_per_scenario = reason_counts
+        self._number_of_characters_uniquely_eliminating_scenario = len(unique_characters)
         self.is_solved = True
 
-    @functools.lru_cache()
+    def get_score(self):
+        return -(statistics.mean(self.get_reason_counts_per_scenario()))
+
+    def __lt__(self, other):
+        assert(isinstance(other, Puzzle))
+        return self.get_score() < other.get_score()
+
     def get_consistent_scenario_set(self):
         ret = set()
         for scenario in self.scenarios:
@@ -700,49 +788,60 @@ class Puzzle:
                 ret.add(scenario)
         return ret
 
-    @functools.lru_cache()
     def get_solution_count(self):
         if not self.is_solved:
             self.solve()
         return len(self.get_consistent_scenario_set())
 
-    @functools.lru_cache()
     def get_rejection_reason_count(self) -> int:
         if not self.is_solved:
             self.solve()
-        return len(self._rejection_reasons)
+        return len(self._rejection_reason_lists)
 
     def get_reason_counts_per_scenario(self):
+        """
+        The number of unique characters that give away the inconsistency of scenarios.
+        """
         if not self.is_solved:
             self.solve()
         return self._reason_count_per_scenario
 
-    @functools.lru_cache()
-    def get_rejection_reasons_distribution(self) -> Dict[str, float]:
+    def number_of_characters_uniquely_eliminating_scenario(self):
+        if not self.is_solved:
+            self.solve()
+        return self._number_of_characters_uniquely_eliminating_scenario
+
+
+    def get_rejection_reason_lists(self):
+        if not self.is_solved:
+            self.solve()
+        return self._rejection_reason_lists
+
+    def get_character_helpfulness_hist(self):
+        ret = dict()
+        for name in self.character_names:
+            ret[name] = 0
+        for reasons in self.get_rejection_reason_lists():
+            for reason in reasons:
+                ret[reason.character_name] += 1
+        return ret
+
+    def get_rejection_reasons_histogram(self) -> Dict[Reason, int]:
         if not self.is_solved:
             self.solve()
         hist = dict()
-        for reason in self._rejection_reasons:
-            if reason not in hist:
-                hist[reason] = 0
-            hist[reason] += 1
-        dist = dict()
-        for reason, count in hist.items():
-            dist[reason] = count / len(self._rejection_reasons)
-        return dist
+        for reasons in self._rejection_reason_lists:
+            for reason in reasons:
+                if reason not in hist:
+                    hist[reason] = 0
+                hist[reason] += 1
+        return hist
 
-    @functools.lru_cache()
-    def has_optimal_reason_distribution(self) -> bool:
-        reason_dist = self.get_rejection_reasons_distribution()
-        reason_dist_count = len(reason_dist)
-        min_allowed_percent = 1 / reason_dist_count - ALLOWED_REASON_DISTRIBUTION_DELTA
-        max_allowed_percent = 1 / reason_dist_count + ALLOWED_REASON_DISTRIBUTION_DELTA
-        for reason, percent in reason_dist.items():
-            if not(min_allowed_percent <= percent <= max_allowed_percent):
-                return False
-        return True
+    def get_rejection_reasons_stdev(self):
+        hist = self.get_rejection_reasons_histogram()
+        values = hist.values()
+        return statistics.stdev(values)
 
-    @functools.lru_cache()
     def get_total_possibilities(self):
         return len(self.scenarios)
 
@@ -752,12 +851,12 @@ class Puzzle:
             and (SOLUTION_COUNT_BOUND[0] <= self.get_solution_count() <= SOLUTION_COUNT_BOUND[1])
         )
 
-    def get_puzzle_score(self):
-        multiplier = MULTIPLIERS[self.num_characters]
-
-    def has_maximum_monks(self):
+    def has_maximum_monks(self, for_exactly_how_many_consistent_scenarios=None):
         if not self.is_solved:
             self.solve()
+        if for_exactly_how_many_consistent_scenarios is None:
+            for_exactly_how_many_consistent_scenarios = len(self.get_consistent_scenario_set())
+        satisfactory_consistent_scenario_count = 0
         for consistent_scenario in self.get_consistent_scenario_set():
             assert(isinstance(consistent_scenario, Scenario))
             monks = 0
@@ -765,11 +864,29 @@ class Puzzle:
                 if kind == Monk:
                     monks += 1
             if monks == self.max_num_monks:
-                return True
-        return False
+                satisfactory_consistent_scenario_count += 1
+        return satisfactory_consistent_scenario_count == for_exactly_how_many_consistent_scenarios
 
     def __str__(self):
         return self.character_names
+
+    def print_puzzle_statistics(self, file=None):
+        reason_counts = self.get_reason_counts_per_scenario()
+        print('Average characters to give away each scenario:', 'Avg. {:0.2f}'.format(statistics.mean(reason_counts)), reason_counts, file=file)
+        print('Unique character count:', self.number_of_characters_uniquely_eliminating_scenario(), file=file)
+        print('Character Helpfulness:', sorted(self.get_character_helpfulness_hist().items()), file=file)
+        print('Standard Deviation of Reasons: {}'.format(self.get_rejection_reasons_stdev()), file=file)
+
+    def code_repr(self):
+        ret = "Puzzle({\n"
+        for name in sorted(self.character_names):
+            ret += "'{}': [\n".format(name)
+            for statement in self.character_statements[name]:
+                ret += statement.code_repr()
+                ret += ",\n"
+            ret += "],\n"
+        ret += "})"
+        return ret
 
 
 class PuzzleGenerator:
@@ -781,64 +898,79 @@ class PuzzleGenerator:
         statements = []
         for statement_kind in self.possible_statement_kinds:
             statements += statement_kind.generate_possibilities(self.possible_names, POSSIBLE_CHARACTERS)
-
-        # Bonus Statements
-        # statements.append(IsOfType('B', Knave))
-        # statements.append(IsOfType('B', Monk))
-        # statements.append(IsOfType('C', Monk))
-        # statements.append(IsOfType('C', Knight))
-
         return statements
 
     def generate_puzzles(self, to_file=True):
         statements = self.generate_possible_statements()
-        statements_needed = 6  # Generates the combination of this many statements for `s`.
-        total_count = math.factorial(len(statements)) / math.factorial(len(statements) - statements_needed)
+        statements_needed = 16  # Generates the combination of this many statements for `s`.
+        total_count = math.factorial(len(statements)) // math.factorial(len(statements) - statements_needed)
         print(len(statements), 'statements to choose from')
         print(total_count, 'total possible permutations')
 
         good_puzzles = []
         valid_puzzle_count = 0  # A valid puzzle has 0, 1, or 2 solutions.
 
-        possible_statement_combinations = list(itertools.permutations(statements, statements_needed))
-        random.shuffle(possible_statement_combinations)
         i = 0
         mean_reason_counts = []
-        EARLY_BREAK = 0.5
-        progress = tqdm(total=total_count * EARLY_BREAK, smoothing=0.15)
+        EARLY_BREAK = 0.00000000000005
+        EXTRA_INFO = True
+        stop = int(total_count * EARLY_BREAK)
+        progress = tqdm(total=stop, smoothing=0.15)
+        # helpfulness = dict()
+        # for name in self.possible_names:
+        #     helpfulness[name] = []
 
         def update_progress():
             progress.update()
-            progress.set_description("{good:0.1f}% good ({good_count}) // avg reason count: {reason_count:0.2f} // {valid:0.1f}% valid".format(
-                good=len(good_puzzles) / i * 100,
-                good_count=len(good_puzzles),
-                reason_count=statistics.mean(mean_reason_counts) if len(mean_reason_counts) > 0 else -1,
-                valid=valid_puzzle_count / i * 100,
-            ))
+            if i > 1 and EXTRA_INFO:
+                progress.set_description("{good:0.1f}% good ({good_count}) // avg reason count: {reason_count:0.2f} // {valid:0.1f}% valid".format(
+                    good=len(good_puzzles) / i * 100,
+                    good_count=len(good_puzzles),
+                    reason_count=statistics.mean(mean_reason_counts) if len(mean_reason_counts) > 1 else -1,
+                    valid=valid_puzzle_count / i * 100,
+                ))
+            # if i > 1:
+            #     d = "Avg. Helpfulness: "
+            #     for n in self.possible_names:
+            #         d += "({}: {:0.1f}) ".format(n, statistics.mean(helpfulness[n]))
+            #     progress.set_description(d)
 
-        for s in possible_statement_combinations:
-            i += 1
-
-            if i/total_count > EARLY_BREAK:
-                break
+        for i in range(1, stop):
+            # Selects from possible statements in random order, without replacement.
+            s = []
+            possible_statement_indexes = set(range(len(statements)))
+            for si in range(statements_needed):
+                index = random.choice(list(possible_statement_indexes))
+                s.append(statements[index])
+                possible_statement_indexes.remove(index)
 
             update_progress()
 
+            # Don't use any two statements twice.
+            for s1, s2 in itertools.product(s, repeat=2):
+                if s1 == s2:
+                    continue
+
             puzzle = Puzzle({
                 self.possible_names[0]: IfConnective(
-                    Biconditional(s[3], IsOfType('B', Monk)),
-                    Biconditional(Honesty('C', 'D', operator.gt), CountOfType(Knave, 2, operator.lt)),
+                    Not(Biconditional(s[0], s[1])),
+                    Biconditional(s[2], s[3]),
                 ),
-                self.possible_names[1]: [
-                    Biconditional(s[1], IsSameAs('A', 'D')),
-                    Not(Biconditional(s[2], s[0])),
-                ],
-                self.possible_names[2]: Biconditional(s[4], s[5]),
-                self.possible_names[3]: DisjunctiveStatement(
-                    CountOfType(Knight, 2, operator.eq),
-                    CountOfType(Knight, 4, operator.eq)
+                self.possible_names[1]: IfConnective(
+                    Biconditional(s[4], s[5]),
+                    Not(Biconditional(s[6], s[7])),
+                ),
+                self.possible_names[2]: IfConnective(
+                    Not(Biconditional(s[8], s[9])),
+                    Biconditional(s[10], s[11]),
+                ),
+                self.possible_names[3]: IfConnective(
+                    Biconditional(s[12], Not(s[13])),
+                    Not(Biconditional(s[14], Not(s[15]))),
                 ),
             })
+            # for name, help_count in puzzle.get_character_helpfulness_hist().items():
+            #     helpfulness[name].append(help_count)
 
             if not puzzle.is_valid_puzzle():
                 continue
@@ -849,16 +981,15 @@ class PuzzleGenerator:
             #################################################
 
             if not (puzzle.get_solution_count() == 2
-                    and puzzle.has_maximum_monks()):
+                    and puzzle.has_maximum_monks(for_exactly_how_many_consistent_scenarios=2)):
                 continue
 
             # Make sure each character says something fairly significant.
             # if not puzzle.has_optimal_reason_distribution():
             #     continue
-            mean_reason_count = statistics.mean(puzzle.get_reason_counts_per_scenario())
-            mean_reason_counts.append(mean_reason_count)
-            if mean_reason_count > 1.8:
-                continue
+            if EXTRA_INFO:
+                mean_reason_count = statistics.mean(puzzle.get_reason_counts_per_scenario())
+                mean_reason_counts.append(mean_reason_count)
 
             scenarios = tuple(puzzle.get_consistent_scenario_set())
             # type: [Scenario]
@@ -873,17 +1004,21 @@ class PuzzleGenerator:
             if difference < len(puzzle.character_names) - allowed_character_variance:
                 continue
             good_puzzles.append(puzzle)
-            with open(os.path.join(os.path.curdir, 'good_puzzles_auto.txt'), 'a') as file:
-                if to_file is False:
-                    file = None
-                print(puzzle.get_character_statements_as_string(), file=file)
-                print('Solutions:', puzzle.get_consistent_scenario_set(), file=file)
-                reason_counts = puzzle.get_reason_counts_per_scenario()
-                print('Reasons to reject:', 'Avg. {:0.2f}'.format(statistics.mean(reason_counts)), reason_counts, file=file)
-                print('', file=file)
 
         update_progress()
         time.sleep(0.5)  # Give progress bar time to update.
         progress.disable = True
         print('\n', len(good_puzzles), 'good puzzles found of', i)
         print('valid count', valid_puzzle_count)
+        sorted_good_puzzles = sorted(good_puzzles)
+        if to_file:
+            f = open(os.path.join(os.path.curdir, 'good_puzzles_auto.txt'), 'w')
+        else:
+            f = None
+        for puzzle in reversed(sorted_good_puzzles):
+            print(puzzle.get_character_statements_as_string(), file=f)
+            print(puzzle.code_repr(), file=f)
+            print('Solutions:', puzzle.get_consistent_scenario_set(), file=f)
+            puzzle.print_puzzle_statistics(file=f)
+            print('', file=f)
+        f.close()

@@ -53,6 +53,28 @@ class TestCharacterConsistency(unittest.TestCase):
         self.assertTrue(self.false_statement.evaluate_consistency(Monk, self.s))
 
 
+class TestConnectives(unittest.TestCase):
+    def test_bob(self):
+        s = Scenario(puzzle=None, character_types={
+            'Betty': Knight,
+            'Bill': Knight,
+            'Bob': Knight,
+            'Brittany': Knight,
+        })
+        self.assertFalse(
+            IfConnective(
+                Biconditional(
+                    Honesty('Bill', 'Betty', operator.le),
+                    IsSameAs('Betty', 'Bill')
+                ),
+                Not(Biconditional(
+                    Honesty('Bob', 'Betty', operator.le),
+                    IsSameAs('Bob', 'Bill')
+                ))
+            ).evaluate_truth(s)
+        )
+
+
 class TestConjunctiveStatement(unittest.TestCase):
     def setUp(self):
         self.s = Scenario(puzzle=None, character_types={
@@ -292,5 +314,6 @@ class TestPuzzles(unittest.TestCase):
             'B': Knave,
             'C': Monk,
         }])
+
 
 
