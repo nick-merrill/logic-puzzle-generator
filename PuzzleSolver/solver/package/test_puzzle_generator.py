@@ -1,7 +1,7 @@
 import unittest
 import operator
 
-from .puzzle_generator import *
+from package.puzzle_generator import *
 
 
 class TestIsOfTypeStatement(unittest.TestCase):
@@ -129,7 +129,7 @@ class TestBasicPuzzleElements(unittest.TestCase):
 class TestPuzzles(unittest.TestCase):
     def assertPuzzleSolution(self, setup, solution_set, allow_monks=True):
         p = Puzzle(setup, allow_monks=allow_monks)
-        p.generate_and_check_scenarios()
+        p.solve()
         correct_scenarios = set()
         for solution in solution_set:
             correct_scenarios.add(Scenario(puzzle=p, character_types=solution))
@@ -141,7 +141,7 @@ class TestPuzzles(unittest.TestCase):
             'A': ConjunctiveStatement(IsOfType('A', Knave), IsOfType('B', Knave)),
             'B': [],
         })
-        p.generate_and_check_scenarios()
+        p.solve()
         correct_scenarios = p.get_consistent_scenario_set()
         self.assertSetEqual(correct_scenarios, {Scenario(puzzle=p, character_types={
             'A': Knave,
@@ -153,7 +153,7 @@ class TestPuzzles(unittest.TestCase):
             'A': [CountOfType(Knave, 2, operator.eq)],
             'B': [],
         })
-        p.generate_and_check_scenarios()
+        p.solve()
         correct_scenarios = p.get_consistent_scenario_set()
         self.assertSetEqual(correct_scenarios, {
             Scenario(puzzle=p, character_types={
@@ -168,7 +168,7 @@ class TestPuzzles(unittest.TestCase):
             'Betty': AllTheSame(),
             'Clara': [],
         }, allow_monks=False)
-        p.generate_and_check_scenarios()
+        p.solve()
         correct_scenarios = p.get_consistent_scenario_set()
         self.assertSetEqual(correct_scenarios, {
             Scenario(puzzle=p, character_types={
@@ -184,7 +184,7 @@ class TestPuzzles(unittest.TestCase):
             'Betty': Not(AllTheSame()),
             'Clara': [],
         }, allow_monks=False)
-        p.generate_and_check_scenarios()
+        p.solve()
         correct_scenarios = p.get_consistent_scenario_set()
         self.assertSetEqual(correct_scenarios, {
             Scenario(puzzle=p, character_types={

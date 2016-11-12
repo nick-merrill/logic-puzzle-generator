@@ -25,7 +25,7 @@ SECRET_KEY = 'yrlvye6@@*r+z1e*3js(=6ci3u*degqecbepiad=m7r5sqhp4)'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['cloudrave.xyz']
 
 
 # Application definition

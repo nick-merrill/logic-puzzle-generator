@@ -1,0 +1,49 @@
+A,B,C,D,Result,Explanation
+V,V,V,V,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969048>, <package.puzzle_generator.Reason object at 0x101969080>, <package.puzzle_generator.Reason object at 0x1019690b8>]"
+V,V,V,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x1019690f0>, <package.puzzle_generator.Reason object at 0x101969128>, <package.puzzle_generator.Reason object at 0x101969160>]"
+V,V,V,M,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969198>, <package.puzzle_generator.Reason object at 0x1019691d0>]"
+K,V,V,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969240>]
+K,V,V,K,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969208>]
+K,V,V,M,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969278>]
+M,V,V,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x1019692e8>]
+M,V,V,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x1019692b0>, <package.puzzle_generator.Reason object at 0x101969320>, <package.puzzle_generator.Reason object at 0x101969358>]"
+V,K,V,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969390>]
+V,K,V,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x1019693c8>, <package.puzzle_generator.Reason object at 0x101969400>]"
+V,K,V,M,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969438>, <package.puzzle_generator.Reason object at 0x101969470>]"
+K,K,V,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x1019694e0>]
+K,K,V,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x1019694a8>, <package.puzzle_generator.Reason object at 0x101969518>, <package.puzzle_generator.Reason object at 0x101969550>]"
+K,K,V,M,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969588>]
+M,K,V,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x1019695f8>]
+M,K,V,K,Consistent
+V,M,V,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x1019695c0>]
+V,M,V,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969630>, <package.puzzle_generator.Reason object at 0x101969668>]"
+K,M,V,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x1019696a0>]
+K,M,V,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x1019696d8>, <package.puzzle_generator.Reason object at 0x101969710>]"
+V,V,K,V,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969748>, <package.puzzle_generator.Reason object at 0x101969780>]"
+V,V,K,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x1019697b8>, <package.puzzle_generator.Reason object at 0x1019697f0>, <package.puzzle_generator.Reason object at 0x101969828>]"
+V,V,K,M,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969860>, <package.puzzle_generator.Reason object at 0x101969898>, <package.puzzle_generator.Reason object at 0x1019698d0>]"
+K,V,K,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969940>]
+K,V,K,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969908>, <package.puzzle_generator.Reason object at 0x101969978>, <package.puzzle_generator.Reason object at 0x1019699b0>]"
+K,V,K,M,Consistent
+M,V,K,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969a20>]
+M,V,K,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x1019699e8>, <package.puzzle_generator.Reason object at 0x101969a58>]"
+V,K,K,V,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969a90>, <package.puzzle_generator.Reason object at 0x101969ac8>]"
+V,K,K,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969b00>, <package.puzzle_generator.Reason object at 0x101969b38>]"
+V,K,K,M,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969b70>]
+K,K,K,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969be0>]
+K,K,K,K,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969ba8>]
+K,K,K,M,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969c18>]
+M,K,K,V,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969c88>, <package.puzzle_generator.Reason object at 0x101969c50>]"
+M,K,K,K,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969cc0>]
+V,M,K,V,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969cf8>, <package.puzzle_generator.Reason object at 0x101969d30>]"
+V,M,K,K,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969d68>]
+K,M,K,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969da0>]
+K,M,K,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969dd8>, <package.puzzle_generator.Reason object at 0x101969e10>]"
+V,V,M,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969e48>]
+V,V,M,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x101969e80>, <package.puzzle_generator.Reason object at 0x101969eb8>, <package.puzzle_generator.Reason object at 0x101969ef0>]"
+K,V,M,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969f28>]
+K,V,M,K,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969f60>]
+V,K,M,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969f98>]
+V,K,M,K,Inconsistent,[<package.puzzle_generator.Reason object at 0x101969fd0>]
+K,K,M,V,Inconsistent,[<package.puzzle_generator.Reason object at 0x10196f048>]
+K,K,M,K,Inconsistent,"[<package.puzzle_generator.Reason object at 0x10196f080>, <package.puzzle_generator.Reason object at 0x10196f0b8>, <package.puzzle_generator.Reason object at 0x10196f0f0>]"
