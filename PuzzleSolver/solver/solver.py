@@ -171,10 +171,19 @@ Not(Honesty('A', 'B', operator.le))
         ],
     })
 
-    p.solve(save_work_to_csv='test.csv')
+    p = Puzzle({
+        'A': IfConnective(IsOfType('B', Knight), IsOfType('A', Knave)),
+        'B': IfConnective(IsOfType('C', Knight), IsOfType('B', Knave)),
+        'C': IfConnective(IsOfType('D', Knight), IsOfType('C', Knave)),
+        'D': IfConnective(IsOfType('E', Knight), IsOfType('D', Knave)),
+        'E': IsOfType('E', Knight),
+    })
+
+    # p.solve(save_work_to_csv='test.csv')
+    p.solve()
 
     p.print_puzzle_with_solutions()
-    p.print_puzzle_statistics()
+    # p.print_puzzle_statistics()
 
 
 if __name__ == '__main__':
