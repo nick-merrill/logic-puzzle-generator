@@ -462,7 +462,8 @@ def english_operator_helper(relation):
     elif relation == operator.ge:
         return 'more than or exactly'
     else:
-        raise Exception("Cannot handle operator of type {}.".format(relation))
+        pass
+        # raise Exception("Cannot handle operator of type {}.".format(relation))
 
 
 class CountOfType(Statement):
@@ -503,6 +504,46 @@ class CountOfType(Statement):
             and self.claimed_count == other.claimed_count
             and self.claimed_relation == other.claimed_relation
         )
+
+
+class CountOfTypes(Statement):
+    def __init__(self, kind1, kind2, claimed_relation):
+        logger.warn("{} Experimental".format(self.__class__.__name__))
+        self.kind1 = kind1
+        self.kind2 = kind2
+        self.claimed_relation = claimed_relation
+
+    def evaluate_truth(self, scenario: Scenario):
+        n1 = 0
+        n2 = 0
+        for t in scenario.character_types.values():
+            if t == self.kind1:
+                n1 += 1
+            if t == self.kind2:
+                n2 += 1
+        return self.claimed_relation(n1, n2)
+
+    def as_sentence(self):
+        return "There are {} {} than/as {}.".format(english_operator_helper(self.claimed_relation), self.kind1, self.kind2)
+
+
+class SumOfTypes(Statement):
+    def __init__(self, kinds: Tuple, count: int, claimed_relation):
+        logger.warn("{} Experimental".format(self.__class__.__name__))
+        self.kinds = kinds
+        self.count = count
+        self.claimed_relation = claimed_relation
+
+    def evaluate_truth(self, scenario: Scenario):
+        n = 0
+        for t in scenario.character_types.values():
+            if t in self.kinds:
+                n += 1
+        return self.claimed_relation(n, self.count)
+
+    def as_sentence(self):
+        return "The sum of {} is {} {}.".format(self.kinds, english_operator_helper(self.claimed_relation), self.count)
+
 
 
 class AbstractConnective(Statement):
@@ -556,7 +597,7 @@ class ExclusiveOrConnective(AbstractConnective):
         return "{} OR {}, BUT NOT BOTH.".format(self.a, self.b)
 
 
-class SamenessCount(Statement):
+class XXXSamenessCount(Statement):
     def __init__(self, claimed_count: int, claimed_relation):
         raise NotImplementedError("SamenessCount isn't working properly yet.")
 
