@@ -2,6 +2,8 @@
 
 ## Usage
 
+### Solving
+
 If we wanted to solve the following puzzle...
 
 1. Alice says, "There are exactly 3 knaves."
@@ -30,5 +32,14 @@ The `solutions` would then be:
         'Carolina': Knave,
     },
 ]
+```
+
+### Generating
+
+Generate a puzzle like so:
+
+```python
+gen = PuzzleGenerator(['A', 'B', 'C', 'D'], [IsSameAs, CountOfType, Honesty])
+gen.generate_puzzles(to_file=True)
 ```
 
