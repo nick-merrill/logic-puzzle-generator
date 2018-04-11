@@ -17,10 +17,10 @@ p = Puzzle({
     'Carolina': [],
 }, allow_monks=False)
 p.solve()
-print(p.get_consistent_scenario_set())
+solutions = p.get_consistent_scenario_set()
 ```
 
-The result would then be:
+The `solutions` would then be:
 
 ```python
 [
